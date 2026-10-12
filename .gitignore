@@ -1,0 +1,23 @@
+# Private server configuration and credentials
+/config.php
+.env
+.env.*
+
+# Runtime data, databases, and backups
+/var/
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.sql
+*.bak
+*.log
+
+# Local tools and editor files
+.DS_Store
+.idea/
+.vscode/
+node_modules/
+vendor/
