@@ -22,6 +22,7 @@ jobs:
         run: |
           php -l public/index.php
           php -l scripts/setup.php
+          php -l scripts/backup.php
           php -l config.example.php
       - name: HTTP integration tests
         run: python3 tests/smoke.py
