@@ -130,10 +130,27 @@ def run():
             assert records[0]["extraDetails"] == example["extraDetails"], "Extra details were lost"
             assert records[0]["updatedAt"] != first_version
 
+            # Snapshot a running database with an open HTTP session.
+            backup = subprocess.run(
+                ["php", "scripts/backup.php"], cwd=ROOT, env=env,
+                check=True, capture_output=True, text=True
+            )
+            files = list((Path(data_dir) / "backups").glob("rma-*.sqlite"))
+            assert len(files) == 1, "Expected exactly one SQLite backup"
+            import sqlite3
+            with sqlite3.connect(files[0]) as snapshot:
+                assert snapshot.execute("SELECT COUNT(*) FROM rmas").fetchone()[0] == 1
+                assert snapshot.execute("SELECT COUNT(*) FROM rma_history").fetchone()[0] == 2
+
             status, _, body = http("/?api=logout", "POST", {})
             assert_status(status, 200, body)
             status, _, body = http("/?api=rmas")
             assert_status(status, 401, body)
+            for _ in range(10):
+                status, _, body = http("/?api=auth", "POST", {"code": "wrong"})
+                assert_status(status, 401, body)
+            status, _, body = http("/?api=auth", "POST", {"code": "wrong"})
+            assert_status(status, 429, body)
             print("RMA tracker: all HTTP smoke checks passed.")
         finally:
             server.terminate()
