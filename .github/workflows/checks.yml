@@ -1,0 +1,28 @@
+name: RMA tracker checks
+on:
+  push:
+    branches:
+      - main
+      - "maintenance/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_sqlite, sqlite3
+      - name: PHP syntax
+        run: |
+          php -l public/index.php
+          php -l scripts/setup.php
+          php -l scripts/backup.php
+          php -l config.example.php
+      - name: HTTP integration tests
+        run: python3 tests/smoke.py

@@ -10,15 +10,15 @@ The project combines my experience in customer service, technical support, and r
 
 ## What this version does
 
-- Provides access through a shared company code and server-side sessions.
-- Creates and updates RMA records stored in SQLite.
+- Provides access through a shared company code and server-side sessions, with CSRF protection and login-attempt throttling.
+- Creates and updates RMA records stored in SQLite, preventing outdated edits from silently overwriting newer ones.
 - Records supplier/distributor, reference, processing employee, notes, resolution, and ERP status.
 - Tracks dates entered, requested, accepted, and returned.
 - Shows dashboard counts for active, waiting, returned, and completed RMAs.
 - Searches references, suppliers, employees, resolutions, and notes, with a status filter.
 - Automatically generates a reference when one is not supplied.
 - Records creation and update events in a database history table.
-- Adjusts the layout for desktop and mobile screens.
+- Adjusts the layout for desktop and mobile screens, including mobile-friendly record cards and a Refresh control.
 
 **Scope:** ERP status is entered manually in this version. Automatic OpenERP/Odoo synchronization, email/SMS notifications, and individual user accounts are not implemented in this source. The history table is stored in the database; this version does not display it in the interface.
 
@@ -61,6 +61,8 @@ GitHub holds the project source; the running application needs PHP hosting.
 | `config.example.php` | Configuration template containing no credentials |
 | `scripts/setup.php` | Generates private configuration and a new access code |
 | `config.php` | Local configuration; excluded from Git |
+| `scripts/backup.php` | Produces a consistent online SQLite backup in a private directory |
+| `tests/smoke.py` | Local regression test suite using fictional data |
 | `var/` | Default runtime database directory; excluded from Git |
 
 ## JSON endpoints
@@ -73,7 +75,35 @@ Endpoints use `public/index.php?api=...`, or `/?api=...` when `public` is the do
 | POST | `logout` | Close the current session |
 | GET | `rmas` | Read records after authentication |
 | POST | `rmas` | Create a record; supplier and processedBy are required |
-| PUT | `rmas` | Update a record by its id |
+| PUT | `rmas` | Update a record with its id and latest `updatedAt` timestamp |
+
+## Upgrade and data protection
+
+Before upgrading an existing installation:
+
+1. **Back up your live data** using `php scripts/backup.php` on the host. It produces a consistent SQLite snapshot inside the private `var/backups/` directory (or configured data directory). Copy a verified backup to separate secure storage.
+2. Keep the existing `config.php`, company access-code hash, and `var/` directory intact. Never publish private configuration or runtime databases.
+3. Deploy the updated PHP and scripts while continuing to serve only the `public/` directory.
+4. Refresh the browser, unlock the application using the **existing** shared code, and verify list, create, and edit operations using fictional test records.
+5. To roll back a code release, restore the previous application code. Restore an older database backup only for deliberate data recovery, since that could remove newer RMA entries.
+
+This maintenance update automatically adds a small `login_attempts` table and one index. It does not drop or overwrite the RMA or history tables. After 10 failed logins from one IP within about 15 minutes, that IP is temporarily locked out; staff sharing a network may share the same limit.
+
+### API compatibility
+
+All mutating JSON requests must send `Content-Type: application/json` and the current session's `X-CSRF-Token` header. The value appears in the page's `meta[name="csrf-token"]` tag. Existing programmatic clients need updating. `PUT ?api=rmas` must also include `updatedAt` from the latest GET response. If another employee has edited that record, the API returns HTTP 409 instead of replacing their work.
+
+### Validation
+
+With PHP 8.1+, PDO SQLite, the sqlite3 extension, and Python 3 installed:
+
+```bash
+php -l public/index.php
+php -l scripts/backup.php
+python3 tests/smoke.py
+```
+
+The tests create a temporary database, use fictional return records, and do not access the production tracker.
 
 ## Portfolio copy
 
