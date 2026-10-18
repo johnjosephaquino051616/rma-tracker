@@ -146,6 +146,12 @@ def run():
             assert_status(status, 200, body)
             status, _, body = http("/?api=rmas")
             assert_status(status, 401, body)
+            # Logout destroys the session token; get a fresh one like a real page reload.
+            status, _, page = http("/")
+            assert_status(status, 200)
+            match = re.search(r'name="csrf-token" content="([0-9a-f]+)"', page)
+            assert match
+            token = match.group(1)
             for _ in range(10):
                 status, _, body = http("/?api=auth", "POST", {"code": "wrong"})
                 assert_status(status, 401, body)
