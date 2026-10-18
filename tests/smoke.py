@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Local HTTP smoke tests using fictional RMA data. No external dependencies."""
-import http.cookiejar
+from http.cookiejar import CookieJar
 import json
 import os
 from pathlib import Path
@@ -33,7 +33,7 @@ def run():
             ["php", "-S", "127.0.0.1:18765", "-t", "public"],
             cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT
         )
-        jar = http.cookiejar.CookieJar()
+        jar = CookieJar()
         client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
         token = ""
 
